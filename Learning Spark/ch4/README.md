@@ -8,3 +8,21 @@
    - 메모리 데이터를 통해서 페어 RDD를 만들 땐 SparkContext.parallelizePairs()
  - 페어RDD도 기본 RDD에서 지원하는 함수는 그대로 사용가능.
   - ...
+
+``` java
+public class PairRddPractice {
+  public void test(){
+    SparkConf sparkConf = new SparkConf().setMaster("local").setAppName("Filter Test");
+    JavaSparkContext javaSparkContext = new JavaSparkContext(sparkConf);
+    JavaRDD<String> inputRDD = javaSparkContext.textFile(getClass().getClassLoader().getResource("pairRddPrac").getFile());
+
+    /** functional interface PairFunction<T, K, V> extends Serializable  {...} */
+    PairFunction<String, String, String> keyData = s -> new Tuple2<>(s.split(",")[0],s);
+
+    JavaPairRDD<String, String> pairs = inputRDD.mapToPair(keyData);
+    Function<Tuple2<String,String>, Boolean> pass = pair -> pair._1().equals("pass");
+
+    System.out.println("count : " + pairs.filter(pass).count());
+  }
+}
+```
