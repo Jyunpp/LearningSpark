@@ -45,7 +45,7 @@ public JavaPairRDD<String, Integer> keyToCount(JavaRDD<String> input) {
  - combineByKey()
    - 대부분의 다른 키별 컴바이너들은 이를 기반으로 구현되어 있음.
    - 한 파티션 내의 데이터들을 하나씩 처리하며 각 데이터는 이전에 나온 적이 없는 키를 갖고 있을 수도 있고, 이전 데이터와 같은 키를 가질 수도 있다.
-   - 만약 새로운 키라면 넘겨준 createCombiner() 함수를 써서 해당 키에 대한 accumulator의 초깃값을 만든다.
+   - 만약 새로운 키라면 넘겨준 `createCombiner()` 함수를 써서 해당 키에 대한 accumulator의 초깃값을 만든다.
      - accumulator : 스파크에서는 계속 관리될 필요가 있는 값. (ex. 현재까지의 합, 혹은 최댓값) 을 저장해 두는 공유 변수를 뜻한다.
    - 출현한 적이 있는 키라면 mergeValue() 함수를 해당 키에 대한 accumulator의 현재 값과 새로운 값에 적용해서 합친다.
    - **각 파티션이 독립적으로 작업이 이루어지므로 동일 키에 대해 여러 개의 accumulator를 가질 수도 있다.
@@ -53,5 +53,17 @@ public JavaPairRDD<String, Integer> keyToCount(JavaRDD<String> input) {
 
 ``` java
 // PairRDD_연습_combineByKey_키별_평균
+    // TODO : setter를 가진 costAndNum 을 나타내는 customPair 클래스를 만드는게 더 좋을 것 같다. (반복적인 new를 없애기 위해서..)
+    Function<Integer, Tuple2<Integer, Integer>> createCombiner =
+            cost -> new Tuple2<>(cost, 1);
+    Function2<Tuple2<Integer, Integer>, Integer, Tuple2<Integer, Integer>> addAndCount =
+            (costAndNum, cost) -> new Tuple2<>(costAndNum._1() + cost, costAndNum._2() + 1);
+    Function2<Tuple2<Integer, Integer>, Tuple2<Integer, Integer>, Tuple2<Integer, Integer>> combine =
+            (costAndNum1, costAndNum2) -> new Tuple2<>(costAndNum1._1() + costAndNum2._1(), costAndNum1._2() + costAndNum2._2());
 
+    JavaPairRDD<String, Tuple2<Integer, Integer>> avgCounts = menuToCost.combineByKey(createCombiner, addAndCount, combine);
+    Map<String, Tuple2<Integer, Integer>> countMap = avgCounts.collectAsMap();
+    for (Map.Entry<String, Tuple2<Integer, Integer>> entry : countMap.entrySet()) {
+        System.out.println(entry.getKey() + ":" + entry.getValue()._1() / entry.getValue()._2());
+    }
 ``` 

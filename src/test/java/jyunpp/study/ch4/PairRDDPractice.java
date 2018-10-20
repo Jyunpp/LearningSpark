@@ -2,13 +2,14 @@ package jyunpp.study.ch4;
 
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.*;
-import org.apache.spark.api.java.function.Function;
-import org.apache.spark.api.java.function.PairFunction;
+import org.apache.spark.api.java.function.*;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import scala.Tuple2;
+import scala.Tuple3;
 
 import java.util.Arrays;
+import java.util.Map;
 
 public class PairRDDPractice {
 
@@ -51,8 +52,24 @@ public class PairRDDPractice {
 	public void PairRDD_연습_combineByKey_키별_평균() {
 		JavaRDD<String> inputRDD = getResource("pairRDDCombineByKeyText");
 
-		// 작성 중
+		JavaPairRDD<String, Integer> menuToCost = inputRDD.mapToPair(s -> {
+			String[] menuCostRow = s.split(" ");
+			return new Tuple2<>(menuCostRow[0], Integer.parseInt(menuCostRow[1]));
+		});
 
+		// TODO : setter를 가진 costAndNum 을 나타내는 customPair 클래스를 만드는게 더 좋을 것 같다. (반복적인 new를 없애기 위해서..)
+		Function<Integer, Tuple2<Integer, Integer>> createCombiner =
+				cost -> new Tuple2<>(cost, 1);
+		Function2<Tuple2<Integer, Integer>, Integer, Tuple2<Integer, Integer>> addAndCount =
+				(costAndNum, cost) -> new Tuple2<>(costAndNum._1() + cost, costAndNum._2() + 1);
+		Function2<Tuple2<Integer, Integer>, Tuple2<Integer, Integer>, Tuple2<Integer, Integer>> combine =
+				(costAndNum1, costAndNum2) -> new Tuple2<>(costAndNum1._1() + costAndNum2._1(), costAndNum1._2() + costAndNum2._2());
+
+		JavaPairRDD<String, Tuple2<Integer, Integer>> avgCounts = menuToCost.combineByKey(createCombiner, addAndCount, combine);
+		Map<String, Tuple2<Integer, Integer>> countMap = avgCounts.collectAsMap();
+		for (Map.Entry<String, Tuple2<Integer, Integer>> entry : countMap.entrySet()) {
+			System.out.println(entry.getKey() + ":" + entry.getValue()._1() / entry.getValue()._2());
+		}
 	}
 
 
