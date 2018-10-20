@@ -4,16 +4,26 @@ import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.*;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.PairFunction;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import scala.Tuple2;
 
+import java.util.Arrays;
+
 public class PairRDDPractice {
 
+	private static SparkConf sparkConf;
+	private static JavaSparkContext javaSparkContext;
+
+	@BeforeClass
+	public static void setUp() {
+		sparkConf = new SparkConf().setMaster("local").setAppName("PairRDD practice");
+		javaSparkContext = new JavaSparkContext(sparkConf);
+	}
+
 	@Test
-	public void PiarRDD_연습_특정_키값_필터(){
-		SparkConf sparkConf = new SparkConf().setMaster("local").setAppName("PairRDD Practice");
-		JavaSparkContext javaSparkContext = new JavaSparkContext(sparkConf);
-		JavaRDD<String> inputRDD = javaSparkContext.textFile(getClass().getClassLoader().getResource("pairRDDText").getFile());
+	public void PiarRDD_연습_특정_키값_필터() {
+		JavaRDD<String> inputRDD = getResource("pairRDDFilterText");
 
 		// functional interface PairFunction<T, K, V> extends Serializable  {...} T -> K key, V value
 		// 구분자 "," 첫문자열을 key, 전체를 value로 하는 pair 생성해주는 PairFunction
@@ -31,4 +41,27 @@ public class PairRDDPractice {
 		/** System.out.println("count : " + pairs.filter(pair -> pair._1().equals("pass")).count()); */
 	}
 
+	@Test
+	public void PairRDD_연습_단어별로_개수세기() {
+		JavaRDD<String> inputRDD = getResource("pairRDDCountWordText");
+		keyToCount(inputRDD).foreach(pair -> System.out.println(pair._1().concat(" : ".concat(pair._2().toString()))));
+	}
+
+	@Test
+	public void PairRDD_연습_combineByKey_키별_평균() {
+		JavaRDD<String> inputRDD = getResource("pairRDDCombineByKeyText");
+
+		// 작성 중
+
+	}
+
+
+	public JavaPairRDD<String, Integer> keyToCount(JavaRDD<String> input) {
+		JavaRDD<String> words = input.flatMap( s -> Arrays.asList(s.split(" ")));
+		return words.mapToPair( s -> new Tuple2<>(s, 1)).reduceByKey(Math::addExact);
+	}
+
+	public JavaRDD<String> getResource(String fileName) {
+		return javaSparkContext.textFile(getClass().getClassLoader().getResource(fileName).getFile());
+	}
 }
